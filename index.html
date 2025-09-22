@@ -45,25 +45,38 @@
     max-width:1200px; margin:0 auto 1rem auto;
     display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
   }
-  /* Title + subtitle now Cinzel and larger */
-  h1{
+
+  /* Title layout: "V3X Clan" (Cinzel, big) + rest (Inter, muted) */
+  .title{
+    display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap;
+    margin:0;
+  }
+  .title .brand{
     font-family:'Cinzel', serif;
     font-weight:900;
-    font-size:clamp(2.4rem, 6.5vw, 5.75rem); /* larger than Tier List header */
-    letter-spacing:0.5px; margin:0;
+    font-size:clamp(2.4rem, 6vw, 5rem); /* keep the big Cinzel size */
+    letter-spacing:.5px;
+  }
+  .title .rest{
+    font-family:'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; /* old font */
+    font-weight:800;
+    color:var(--muted);                /* same color as description */
+    font-size:clamp(1.3rem, 3vw, 2.1rem); /* slightly smaller so it fits one line */
+    letter-spacing:.2px;
   }
   .sub{
-    font-family:'Cinzel', serif;
-    font-size:clamp(1.05rem, 2.2vw, 1.35rem);
+    font-family:'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; /* back to old font */
+    font-size:clamp(1rem, 2vw, 1.2rem);
     color:var(--muted);
   }
-  /* "Tier List" centered header (Cinzel) */
+
+  /* Centered "Tier List" header (Cinzel) */
   .tierlist-header{
     max-width:1200px;
     margin:2rem auto 1rem auto;
     font-family:'Cinzel', serif;
     font-weight:900;
-    font-size:clamp(2rem, 6vw, 5rem); /* about as big as tier labels */
+    font-size:clamp(2rem, 6vw, 5rem);
     letter-spacing:1px;
     text-align:center;
   }
@@ -177,7 +190,10 @@
 <body>
   <header>
     <div>
-      <h1>V3X Clan Player Tier-List and Chivalry Skill Score (CSS)</h1> 
+      <h1 class="title">
+        <span class="brand">V3X Clan</span>
+        <span class="rest">Player Tier-List and Chivalry Skill Score (CSS)</span>
+      </h1>
       <div class="sub">Scores shown on a 0–10 scale. Hover over a card to see individual stats.</div>
     </div>
     <div class="actions">
