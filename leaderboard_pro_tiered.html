@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chivalry 2 Leaderboard — Pro+ Tiered</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1020; --card:#121a33cc; --card-border:#2a355f; --text:#e7ecff; --muted:#9aa6d1;
+    --accent:#5b8cff; --accent3:#2ee7c9; --glow: 0 10px 30px rgba(91,140,255,0.30);
+    --platinum1:#dfe7f1; --platinum2:#b7c3d6; --platinum3:#8aa0bf;
+    --gold:#f0c419; --silver:#c0cbd7; --bronze:#b87333; --gray:#8c93a8;
+    --gold-grad: linear-gradient(135deg, #f9e08a, #f0c419);
+    --silver-grad: linear-gradient(135deg, #e9eff7, #c0cbd7);
+    --bronze-grad: linear-gradient(135deg, #e4ae77, #b87333);
+    --gray-grad: linear-gradient(135deg, #b9c1d1, #8c93a8);
+  }
+  [data-theme="light"]{
+    --bg:#f6f8ff; --card:#ffffff; --card-border:#e6e9f5; --text:#0e1330; --muted:#556089;
+    --platinum1:#e9eef5; --platinum2:#cdd6e6; --platinum3:#9fb3d3;
+    --gold:#e0b20f; --silver:#aeb7c2; --bronze:#a7692e; --gray:#8b94a8;
+    --glow: 0 6px 18px rgba(48,86,255,0.15);
+    --gold-grad: linear-gradient(135deg, #f2d66b, #e0b20f);
+    --silver-grad: linear-gradient(135deg, #e1e7f0, #aeb7c2);
+    --bronze-grad: linear-gradient(135deg, #d59b62, #a7692e);
+    --gray-grad: linear-gradient(135deg, #aeb6c6, #8b94a8);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:2rem 1.2rem 4rem;
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(1200px 800px at 10% -10%, rgba(91,140,255,0.15), transparent 60%),
+      radial-gradient(900px 700px at 110% 10%, rgba(156,123,255,0.12), transparent 60%),
+      radial-gradient(1000px 900px at 50% 120%, rgba(46,231,201,0.10), transparent 60%),
+      var(--bg);
+    color:var(--text);
+  }
+  header{
+    max-width:1200px; margin:0 auto 1rem auto;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  }
+  h1{font-weight:800; letter-spacing:0.4px; margin:0}
+  .sub{color:var(--muted)}
+  .actions{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+  .btn{
+    appearance:none; border:1px solid var(--card-border); background:var(--card);
+    color:var(--text); padding:0.45rem 0.7rem; border-radius:10px; cursor:pointer; text-decoration:none;
+  }
+  .btn:hover{ border-color:#4360b9; }
+  .controls{
+    max-width:1200px; margin:0 auto 1rem auto;
+    display:flex; gap:.6rem; flex-wrap:wrap; align-items:center;
+  }
+  .input{ padding:.45rem .6rem; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--text); }
+  .select{ padding:.45rem .6rem; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--text); }
+
+  /* Tier sections */
+  .tier-section{
+    max-width:1200px; margin:1.5rem auto 2rem auto;
+    display:grid; grid-template-columns: 160px 1fr; gap:1rem; align-items:start;
+  }
+  .tier-label{
+    position:sticky; top:1rem;
+    display:flex; align-items:center; justify-content:center;
+    height:140px;
+    border-radius:16px;
+    background:var(--card);
+    border:1px solid var(--card-border);
+    box-shadow:var(--glow);
+    font-family:'UnifrakturMaguntia', cursive;
+    font-size:84px; line-height:1; letter-spacing:2px;
+  }
+  .tier-label.S{ 
+    background: linear-gradient(160deg, var(--platinum1), var(--platinum2) 60%, var(--platinum3));
+    color:#0e1330;
+    border:1px solid rgba(255,255,255,0.5);
+  }
+  .tier-label.A{ color:var(--gold); }
+  .tier-label.B{ color:var(--silver); }
+  .tier-label.C{ color:var(--bronze); }
+  .tier-label.F{ color:var(--gray); }
+
+  .tier-grid{
+    display:grid; gap:1rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  /* Player cards */
+  .card{
+    position:relative;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00)),
+               var(--card);
+    border:2px solid var(--card-border);
+    border-radius:16px; padding:1rem 1rem 1.1rem;
+    box-shadow: var(--glow);
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    overflow:hidden;
+  }
+  .card:hover{ transform: translateY(-2px); border-color:#4360b9; box-shadow:0 14px 36px rgba(0,0,0,0.4); }
+  .name{ font-weight:800; font-size:1.05rem; letter-spacing:0.2px; display:flex; align-items:center; gap:.5rem; }
+  .medal{ font-size:1.15rem; }
+  .score{
+    font-weight:900; font-size:3.1rem; margin-top:.15rem;
+    background:linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .breakdown{ color:var(--muted); font-size:0.80rem; margin-top:0.35rem; display:flex; flex-wrap:wrap; gap:.35rem; }
+  .pill{ display:inline-block; padding:.15rem .45rem; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); }
+
+  /* Tier color borders on cards */
+  .card.S{ border-image: linear-gradient(45deg, var(--platinum1), var(--platinum3)) 1; }
+  .card.A{ border-image: var(--gold-grad) 1; }
+  .card.B{ border-image: var(--silver-grad) 1; }
+  .card.C{ border-image: var(--bronze-grad) 1; }
+  .card.F{ border-image: var(--gray-grad) 1; }
+
+  /* Tooltip with raw stats */
+  .tooltip{
+    position:absolute; inset:auto auto 12px 12px;
+    background:#0d1430; border:1px solid #2a355f; border-radius:14px;
+    padding:0.8rem 0.9rem; font-size:0.9rem; line-height:1.35;
+    box-shadow:0 12px 40px rgba(0,0,0,0.4);
+    display:none; z-index:5; min-width: 280px;
+  }
+  [data-theme="light"] .tooltip{ background:#ffffff; border-color:#e6e9f5; }
+  .tooltip .row{ display:flex; justify-content:space-between; gap:1rem; }
+  .tooltip .row + .row{ margin-top:0.25rem; }
+  .card:hover .tooltip{ display:block; }
+
+  /* Empty-state / status */
+  .status{max-width:1200px; margin:1rem auto; padding:.8rem; border:1px solid var(--card-border); border-radius:10px; background:var(--card); color:var(--muted);}
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Chivalry 2 <span class="sub">Pro+ Tiered Leaderboard</span></h1>
+      <div class="sub">Scores shown on a 0–10 scale (one decimal). Hover a card to see raw stats.</div>
+    </div>
+    <div class="actions">
+      <a class="btn" href="results.csv" download>⬇️ results.csv</a>
+      <a class="btn" href="players.csv" download>⬇️ players.csv</a>
+      <label style="display:flex;align-items:center;gap:.5rem;"><input id="themeToggle" type="checkbox"> Light mode</label>
+    </div>
+  </header>
+
+  <div class="controls">
+    <input id="search" class="input" placeholder="Search player…" />
+    <select id="tierFilter" class="select">
+      <option value="ALL">All tiers</option>
+      <option value="S">S</option>
+      <option value="A">A</option>
+      <option value="B">B</option>
+      <option value="C">C</option>
+      <option value="F">F</option>
+    </select>
+    <select id="sortBy" class="select">
+      <option value="score">Sort by Rating</option>
+      <option value="kd">Sort by KD Unit</option>
+      <option value="wr">Sort by WR Unit</option>
+      <option value="kpm">Sort by KPM Unit</option>
+      <option value="exp">Sort by EXP Unit</option>
+      <option value="vers">Sort by VERS Unit</option>
+    </select>
+    <a id="downloadView" class="btn" href="#" download="leaderboard_view.csv">⬇️ filtered view CSV</a>
+  </div>
+
+  <div id="status" class="status">Loading…</div>
+  <div id="container"></div>
+
+<script>
+function esc(s){return String(s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;","&quot;":"&quot;","'":"&#39;"}[m]));}
+function num(v, d=0){ const x = Number(v); return Number.isFinite(x) ? x : d; }
+
+async function fetchCSV(url){
+  const bust = 'v=' + Date.now();
+  const full = url + (url.includes('?') ? '&' : '?') + bust;
+  const res = await fetch(full, {cache:'no-store'});
+  if(!res.ok) throw new Error(url + ' HTTP ' + res.status);
+  return await res.text();
+}
+function parseCSV(text){
+  return Papa.parse(text.trim(), {header:true, dynamicTyping:true, skipEmptyLines:true});
+}
+
+function assignTier(displayScore){
+  if (displayScore > 8) return 'S';
+  if (displayScore > 7) return 'A';
+  if (displayScore > 6) return 'B';
+  if (displayScore > 4) return 'C';
+  return 'F';
+}
+
+function buildIndex(players){
+  const idx = Object.create(null);
+  (players||[]).forEach(p => { idx[String(p.player_name||'').toLowerCase()] = p; });
+  return idx;
+}
+
+function medalFor(rank){
+  if(rank===1) return '🥇';
+  if(rank===2) return '🥈';
+  if(rank===3) return '🥉';
+  return '';
+}
+
+function makeCard(r, raw, rank){
+  const wr = (num(raw.Wins)+num(raw.Losses))>0 ? (num(raw.Wins)/(num(raw.Wins)+num(raw.Losses))) : NaN;
+  const div = document.createElement('article');
+  div.className = 'card ' + r._tier;
+  div.innerHTML = `
+    <div class="name" title="${esc(r.player_name)}"><span class="medal">${medalFor(rank)}</span>${esc(r.player_name)}</div>
+    <div class="score">${r._displayScore.toFixed(1)}</div>
+    <div class="breakdown">
+      <span class="pill">KD ${num(r.kd_unit).toFixed(2)}</span>
+      <span class="pill">WR ${num(r.wr_unit).toFixed(2)}</span>
+      <span class="pill">KPM ${num(r.kpm_unit).toFixed(2)}</span>
+      <span class="pill">EXP ${num(r.exp_unit).toFixed(2)}</span>
+      <span class="pill">VERS ${num(r.vers_unit).toFixed(2)}</span>
+    </div>
+    <div class="tooltip">
+      <div class="row"><span>Kills</span><strong>${esc(raw.K ?? '—')}</strong></div>
+      <div class="row"><span>Deaths</span><strong>${esc(raw.D ?? '—')}</strong></div>
+      <div class="row"><span>Wins</span><strong>${esc(raw.Wins ?? '—')}</strong></div>
+      <div class="row"><span>Losses</span><strong>${esc(raw.Losses ?? '—')}</strong></div>
+      <div class="row"><span>Win rate</span><strong>${isFinite(wr)? (wr*100).toFixed(1)+'%':'—'}</strong></div>
+      <div class="row"><span>Hours</span><strong>${esc(raw.hours ?? '—')}</strong></div>
+      <div class="row"><span>Weapons ≥1000</span><strong>${esc(raw.weapons_ge_1000 ?? '—')}</strong></div>
+      <div class="row"><span>Revives</span><strong>${esc(raw.revives ?? '—')}</strong></div>
+      <div class="row"><span>Items built</span><strong>${esc(raw.items ?? '—')}</strong></div>
+    </div>
+  `;
+  return div;
+}
+
+function groupAndSort(rows, playersIndex, searchTerm, tierFilter, sortBy){
+  const results = rows.map(r => {
+    const sc = num(r.score);
+    const disp = sc/10;
+    const tier = assignTier(disp);
+    return {...r, _displayScore: disp, _tier: tier};
+  });
+
+  // Search filter
+  const q = (searchTerm||'').trim().toLowerCase();
+  let filtered = results.filter(r => q ? String(r.player_name||'').toLowerCase().includes(q) : true);
+
+  // Tier filter
+  if(tierFilter && tierFilter !== 'ALL'){
+    filtered = filtered.filter(r => r._tier === tierFilter);
+  }
+
+  // Sorting
+  const sortMap = {
+    score: (a,b)=> num(b._displayScore)-num(a._displayScore),
+    kd:    (a,b)=> num(b.kd_unit)-num(a.kd_unit),
+    wr:    (a,b)=> num(b.wr_unit)-num(a.wr_unit),
+    kpm:   (a,b)=> num(b.kpm_unit)-num(a.kpm_unit),
+    exp:   (a,b)=> num(b.exp_unit)-num(a.exp_unit),
+    vers:  (a,b)=> num(b.vers_unit)-num(a.vers_unit),
+  };
+  filtered.sort(sortMap[sortBy] || sortMap.score);
+
+  // Re-rank globally for medals
+  filtered.forEach((r, i) => r._rank = i+1);
+
+  // Group by tier preserving this filtered/sorted order
+  const groups = {S:[], A:[], B:[], C:[], F:[]};
+  filtered.forEach(r => groups[r._tier].push(r));
+  return groups;
+}
+
+function render(groups, playersIndex){
+  const container = document.getElementById('container');
+  container.innerHTML = '';
+  const order = ['S','A','B','C','F'];
+
+  order.forEach(tier => {
+    const list = groups[tier];
+    if(!list || !list.length) return;
+
+    const section = document.createElement('section');
+    section.className = 'tier-section';
+
+    const label = document.createElement('div');
+    label.className = 'tier-label ' + tier;
+    label.textContent = tier;
+    section.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'tier-grid';
+
+    list.forEach(r => {
+      const raw = playersIndex[String(r.player_name||'').toLowerCase()] || {};
+      grid.appendChild(makeCard(r, raw, r._rank));
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+function csvOfFiltered(groups){
+  // Flatten groups in tier order
+  const order = ['S','A','B','C','F'];
+  const rows = [];
+  order.forEach(t => (groups[t]||[]).forEach(r => rows.append));
+  // We will rebuild with map string; easier: use Papa to unparse
+  const flat = [];
+  order.forEach(tier => {
+    (groups[tier] || []).forEach(r => {
+      flat.push({
+        tier: tier,
+        rank: r._rank,
+        player_name: r.player_name,
+        rating_0_to_10: r._displayScore.toFixed(1),
+        kd_unit: num(r.kd_unit).toFixed(3),
+        wr_unit: num(r.wr_unit).toFixed(3),
+        kpm_unit: num(r.kpm_unit).toFixed(3),
+        exp_unit: num(r.exp_unit).toFixed(3),
+        vers_unit: num(r.vers_unit).toFixed(3),
+        score_raw_0_to_100: num(r.score).toFixed(2)
+      });
+    });
+  });
+  return Papa.unparse(flat);
+}
+
+(function initTheme(){
+  const saved = localStorage.getItem('theme');
+  if(saved) document.documentElement.setAttribute('data-theme', saved);
+  const isLight = document.documentElement.getAttribute('data-theme')==='light';
+  document.getElementById('themeToggle').checked = isLight;
+  document.getElementById('themeToggle').addEventListener('change', e=>{
+    const theme = e.target.checked ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  });
+})();
+
+(async function init(){
+  const status = document.getElementById('status');
+  try {
+    const resText = await fetchCSV('results.csv');
+    const resParsed = parseCSV(resText);
+    if (!resParsed.data || !resParsed.data.length) {
+      status.textContent = 'results.csv loaded but has 0 rows.';
+      return;
+    }
+    const playersText = await fetchCSV('players.csv').catch(()=>null);
+    const playersParsed = playersText ? parseCSV(playersText) : {data:[]};
+    const playersIndex = buildIndex(playersParsed.data);
+
+    const searchEl = document.getElementById('search');
+    const tierEl = document.getElementById('tierFilter');
+    const sortEl = document.getElementById('sortBy');
+    const rows = resParsed.data.slice();
+
+    function refresh(){
+      const groups = groupAndSort(rows, playersIndex, searchEl.value, tierEl.value, sortEl.value);
+      render(groups, playersIndex);
+      // Build downloadable filtered CSV
+      const csv = csvOfFiltered(groups);
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const dl = document.getElementById('downloadView');
+      dl.href = url;
+      // status
+      const total = ['S','A','B','C','F'].reduce((acc,k)=>acc+(groups[k]?.length||0),0);
+      status.textContent = `Loaded ${rows.length} players • Showing ${total} after filters`;
+    }
+
+    searchEl.addEventListener('input', refresh);
+    tierEl.addEventListener('change', refresh);
+    sortEl.addEventListener('change', refresh);
+
+    refresh();
+  } catch (e) {
+    status.textContent = 'Failed to load CSV: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>
