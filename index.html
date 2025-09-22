@@ -91,27 +91,41 @@
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
 
-  /* Player cards (taller for tooltips) */
+  /* Player cards (taller for tooltips & photo) */
   .card{
     position:relative;
     background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00)),
                var(--card);
     border:2px solid var(--card-border);
     border-radius:16px; padding:1.5rem;
-    min-height:260px; /* taller cards */
+    min-height:360px; /* taller cards */
     box-shadow: var(--glow);
     transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
     overflow:hidden;
   }
   .card:hover{ transform: translateY(-2px); border-color:#4360b9; box-shadow:0 14px 36px rgba(0,0,0,0.4); }
   .name{ font-weight:800; font-size:1.15rem; letter-spacing:0.2px; display:flex; align-items:center; gap:.5rem; }
-  .medal{ font-size:1.25rem; }
+
+  .toprow{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-top:.25rem;
+  }
   .score{
-    font-weight:900; font-size:3.3rem; margin-top:.25rem;
+    font-weight:900; font-size:3.3rem; line-height:1;
     background:linear-gradient(135deg, var(--accent), var(--accent3));
     -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  .breakdown{ color:var(--muted); font-size:0.85rem; margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:.35rem; }
+  .profile-wrap{
+    flex:0 0 auto; align-self:stretch; display:flex; align-items:flex-start; justify-content:flex-end;
+  }
+  .profile{
+    display:block;
+    max-height:230px; /* nearly the height of the card body */
+    width:auto; object-fit:cover;
+    border-radius:14px; border:1px solid rgba(255,255,255,0.12);
+  }
+
+  .medal{ font-size:1.25rem; }
+  .breakdown{ color:var(--muted); font-size:0.85rem; margin-top:0.8rem; display:flex; flex-wrap:wrap; gap:.35rem; }
   .pill{ display:inline-block; padding:.2rem .55rem; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); }
 
   /* Tier color borders on cards */
@@ -127,7 +141,7 @@
     background:#0d1430; border:1px solid #2a355f; border-radius:14px;
     padding:1rem; font-size:1rem; line-height:1.4;
     box-shadow:0 12px 40px rgba(0,0,0,0.4);
-    display:none; z-index:5; min-width: 280px;
+    display:none; z-index:5; min-width: 300px;
   }
   [data-theme="light"] .tooltip{ background:#ffffff; border-color:#e6e9f5; }
   .tooltip .row{ display:flex; justify-content:space-between; gap:1rem; }
@@ -178,6 +192,7 @@
 <script>
 function esc(s){return String(s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;","&quot;":"&quot;","'":"&#39;"}[m]));}
 function num(v, d=0){ const x = Number(v); return Number.isFinite(x) ? x : d; }
+function iconUrl(name){ return 'player_icons/' + encodeURIComponent(String(name||'')) + '.png'; }
 
 async function fetchCSV(url){
   const bust = 'v=' + Date.now();
@@ -212,12 +227,27 @@ function medalFor(rank){
 }
 
 function makeCard(r, raw, rank){
-  const wr = (num(raw.Wins)+num(raw.Losses))>0 ? (num(raw.Wins)/(num(raw.Wins)+num(raw.Losses))) : NaN;
+  const total = (num(raw.Wins)+num(raw.Losses));
+  const wr = total>0 ? (num(raw.Wins)/total) : NaN;
+  const kpmRaw = (num(raw.K) && num(raw.hours)) ? (num(raw.K)/(num(raw.hours)*60)) : NaN;
+
   const div = document.createElement('article');
   div.className = 'card ' + r._tier;
+
+  const imgHTML = `
+    <div class="profile-wrap">
+      <img class="profile" alt="" src="${iconUrl(r.player_name)}"
+           onerror="this.style.display='none'">
+    </div>`;
+
   div.innerHTML = `
-    <div class="name" title="${esc(r.player_name)}"><span class="medal">${medalFor(rank)}</span>${esc(r.player_name)}</div>
-    <div class="score">${r._displayScore.toFixed(1)}</div>
+    <div class="name" title="${esc(r.player_name)}">
+      <span class="medal">${medalFor(rank)}</span>${esc(r.player_name)}
+    </div>
+    <div class="toprow">
+      <div class="score">${r._displayScore.toFixed(1)}</div>
+      ${imgHTML}
+    </div>
     <div class="breakdown">
       <span class="pill">KD ${num(r.kd_unit).toFixed(2)}</span>
       <span class="pill">WR ${num(r.wr_unit).toFixed(2)}</span>
@@ -228,11 +258,12 @@ function makeCard(r, raw, rank){
     <div class="tooltip">
       <div class="row"><span>Kills</span><strong>${esc(raw.K ?? '—')}</strong></div>
       <div class="row"><span>Deaths</span><strong>${esc(raw.D ?? '—')}</strong></div>
+      <div class="row"><span>Kills/minute</span><strong>${isFinite(kpmRaw)? kpmRaw.toFixed(3) : '—'}</strong></div>
       <div class="row"><span>Wins</span><strong>${esc(raw.Wins ?? '—')}</strong></div>
       <div class="row"><span>Losses</span><strong>${esc(raw.Losses ?? '—')}</strong></div>
       <div class="row"><span>Win rate</span><strong>${isFinite(wr)? (wr*100).toFixed(1)+'%':'—'}</strong></div>
       <div class="row"><span>Hours</span><strong>${esc(raw.hours ?? '—')}</strong></div>
-      <div class="row"><span>Weapons ≥1000</span><strong>${esc(raw.weapons_ge_1000 ?? '—')}</strong></div>
+      <div class="row"><span>Weapons &gt; level 50</span><strong>${esc(raw.weapons_ge_1000 ?? '—')}</strong></div>
       <div class="row"><span>Revives</span><strong>${esc(raw.revives ?? '—')}</strong></div>
       <div class="row"><span>Items built</span><strong>${esc(raw.items ?? '—')}</strong></div>
     </div>
