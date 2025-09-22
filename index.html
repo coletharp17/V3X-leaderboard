@@ -45,8 +45,29 @@
     max-width:1200px; margin:0 auto 1rem auto;
     display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
   }
-  h1{font-weight:900; letter-spacing:0.4px; margin:0}
-  .sub{color:var(--muted)}
+  /* Title + subtitle now Cinzel and larger */
+  h1{
+    font-family:'Cinzel', serif;
+    font-weight:900;
+    font-size:clamp(2.4rem, 6.5vw, 5.75rem); /* larger than Tier List header */
+    letter-spacing:0.5px; margin:0;
+  }
+  .sub{
+    font-family:'Cinzel', serif;
+    font-size:clamp(1.05rem, 2.2vw, 1.35rem);
+    color:var(--muted);
+  }
+  /* "Tier List" centered header (Cinzel) */
+  .tierlist-header{
+    max-width:1200px;
+    margin:2rem auto 1rem auto;
+    font-family:'Cinzel', serif;
+    font-weight:900;
+    font-size:clamp(2rem, 6vw, 5rem); /* about as big as tier labels */
+    letter-spacing:1px;
+    text-align:center;
+  }
+
   .actions{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
   .btn{
     appearance:none; border:1px solid var(--card-border); background:var(--card);
@@ -55,7 +76,7 @@
   .btn:hover{ border-color:#4360b9; }
   .controls{
     max-width:1200px; margin:0 auto 1rem auto;
-    display:flex; gap:.6rem; flex-wrap:wrap; align-items:center;
+    display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; justify-content:center;
   }
   .input{ padding:.45rem .6rem; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--text); }
   .select{ padding:.45rem .6rem; border-radius:10px; border:1px solid var(--card-border); background:var(--card); color:var(--text); }
@@ -73,9 +94,10 @@
     background:var(--card);
     border:1px solid var(--card-border);
     box-shadow:var(--glow);
-    font-family:'Cinzel', serif; /* legible medieval */
+    font-family:'Cinzel', serif;
     font-weight:900;
-    font-size:84px; line-height:1; letter-spacing:2px;
+    font-size:clamp(2rem, 6vw, 5rem);
+    line-height:1; letter-spacing:2px;
   }
   .tier-label.S{ 
     background: linear-gradient(160deg, var(--platinum1), var(--platinum2) 60%, var(--platinum3));
@@ -98,7 +120,7 @@
                var(--card);
     border:2px solid var(--card-border);
     border-radius:16px; padding:1.5rem;
-    min-height:360px; /* taller cards */
+    min-height:360px;
     box-shadow: var(--glow);
     transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
     overflow:hidden;
@@ -155,7 +177,7 @@
 <body>
   <header>
     <div>
-      <h1>V3X Clan <span class="sub">Player Tier-List and Chivalry Skill Score (CSS)</span></h1> 
+      <h1>V3X Clan Player Tier-List and Chivalry Skill Score (CSS)</h1> 
       <div class="sub">Scores shown on a 0–10 scale. Hover over a card to see individual stats.</div>
     </div>
     <div class="actions">
@@ -164,6 +186,9 @@
       <label style="display:flex;align-items:center;gap:.5rem;"><input id="themeToggle" type="checkbox"> Light mode</label>
     </div>
   </header>
+
+  <!-- Centered Tier List header -->
+  <div class="tierlist-header">Tier List</div>
 
   <div class="controls">
     <input id="search" class="input" placeholder="Search player…" />
