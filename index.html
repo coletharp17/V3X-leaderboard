@@ -32,7 +32,7 @@
   *{box-sizing:border-box}
   body{
     margin:0; padding:2rem 1.2rem 4rem;
-    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    font-family:'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     background:
       radial-gradient(1200px 800px at 10% -10%, rgba(91,140,255,0.15), transparent 60%),
       radial-gradient(900px 700px at 110% 10%, rgba(156,123,255,0.12), transparent 60%),
@@ -40,11 +40,11 @@
       var(--bg);
     color:var(--text);
   }
+
   header{
     max-width:1200px; margin:0 auto 1rem auto;
     display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
   }
-
   .title{
     display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap;
     margin:0;
@@ -84,6 +84,7 @@
     color:var(--text); padding:0.45rem 0.7rem; border-radius:10px; cursor:pointer; text-decoration:none;
   }
   .btn:hover{ border-color:#4360b9; }
+
   .controls{
     max-width:1200px; margin:0 auto 1rem auto;
     display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; justify-content:center;
@@ -149,11 +150,13 @@
     background:#0d1430; border:1px solid #2a355f; border-radius:14px;
     padding:1rem; font-size:1rem; line-height:1.4;
     box-shadow:0 12px 40px rgba(0,0,0,0.4);
-    display:none; z-index:5; min-width:300px;
+    display:none; z-index:5; min-width: 300px;
   }
   .card:hover .tooltip{ display:block; }
   .tooltip .row{ display:flex; justify-content:space-between; gap:1rem;}
-  .tooltip .row+ .row{ margin-top:.35rem;}
+  .tooltip .row + .row{ margin-top:.35rem;}
+
+  .status{max-width:1200px; margin:1rem auto; padding:.8rem; border:1px solid var(--card-border); border-radius:10px; background:var(--card); color:var(--muted);}
 </style>
 </head>
 <body>
@@ -168,7 +171,7 @@
     <div class="actions">
       <a class="btn" href="results.csv" download>⬇️ results.csv</a>
       <a class="btn" href="players.csv" download>⬇️ players.csv</a>
-      <label><input id="themeToggle" type="checkbox"> Light mode</label>
+      <label style="display:flex;align-items:center;gap:.5rem;"><input id="themeToggle" type="checkbox"> Light mode</label>
     </div>
   </header>
 
@@ -187,30 +190,72 @@
       <option value="exp">Sort by EXPERIENCE Unit</option>
       <option value="vers">Sort by VERSATILITY Unit</option>
     </select>
+    <a id="downloadView" class="btn" href="#" download="leaderboard_view.csv">⬇️ filtered view CSV</a>
   </div>
 
   <div id="status" class="status">Loading…</div>
   <div id="container"></div>
 
 <script>
-function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;","&quot;":"&quot;","'":"&#39;"}[m]));}
-function num(v,d=0){const x=Number(v);return Number.isFinite(x)?x:d;}
-function iconUrl(name){return 'player_icons/'+encodeURIComponent(String(name||''))+'.png';}
+function esc(s){return String(s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;","&quot;":"&quot;","'":"&#39;"}[m]));}
+function num(v, d=0){ const x = Number(v); return Number.isFinite(x) ? x : d; }
+function iconUrl(name){ return 'player_icons/' + encodeURIComponent(String(name||'')) + '.png'; }
 
-function assignTier(score){if(score>8)return'S';if(score>7)return'A';if(score>6)return'B';if(score>4)return'C';return'F';}
-function buildIndex(players){const idx={};(players||[]).forEach(p=>{idx[String(p.player_name||'').toLowerCase()]=p;});return idx;}
-function medalFor(r){if(r===1)return'🥇';if(r===2)return'🥈';if(r===3)return'🥉';return'';}
+async function fetchCSV(url){
+  const bust = 'v=' + Date.now();
+  const full = url + (url.includes('?') ? '&' : '?') + bust;
+  const res = await fetch(full, {cache:'no-store'});
+  if(!res.ok) throw new Error(url + ' HTTP ' + res.status);
+  return await res.text();
+}
+function parseCSV(text){
+  return Papa.parse(text.trim(), {header:true, dynamicTyping:true, skipEmptyLines:true});
+}
 
-function makeCard(r,raw,rank){
-  const wr=(num(raw.Wins)+num(raw.Losses))>0?(num(raw.Wins)/(num(raw.Wins)+num(raw.Losses))):NaN;
-  const kpmRaw=(num(raw.K)&&num(raw.hours))?(num(raw.K)/(num(raw.hours)*60)):NaN;
-  const kdRaw=(num(raw.D)>0)?num(raw.K)/num(raw.D):NaN;
+function assignTier(displayScore){
+  if (displayScore > 8) return 'S';
+  if (displayScore > 7) return 'A';
+  if (displayScore > 6) return 'B';
+  if (displayScore > 4) return 'C';
+  return 'F';
+}
 
-  const div=document.createElement('article');div.className='card '+r._tier;
-  div.innerHTML=`
-    <div class="name"><span class="medal">${medalFor(rank)}</span>${esc(r.player_name)}</div>
-    <div class="toprow"><div class="score">${r._displayScore.toFixed(1)}</div>
-      <div class="profile-wrap"><img class="profile" alt="" src="${iconUrl(r.player_name)}" onerror="this.style.display='none'"></div></div>
+function buildIndex(players){
+  const idx = Object.create(null);
+  (players||[]).forEach(p => { idx[String(p.player_name||'').toLowerCase()] = p; });
+  return idx;
+}
+
+function medalFor(rank){
+  if(rank===1) return '🥇';
+  if(rank===2) return '🥈';
+  if(rank===3) return '🥉';
+  return '';
+}
+
+function makeCard(r, raw, rank){
+  const total = (num(raw.Wins)+num(raw.Losses));
+  const wr = total>0 ? (num(raw.Wins)/total) : NaN;
+  const kpmRaw = (num(raw.K) && num(raw.hours)) ? (num(raw.K)/(num(raw.hours)*60)) : NaN;
+  const kdRaw = (num(raw.D)>0) ? (num(raw.K)/num(raw.D)) : NaN;
+
+  const div = document.createElement('article');
+  div.className = 'card ' + r._tier;
+
+  const imgHTML = `
+    <div class="profile-wrap">
+      <img class="profile" alt="" src="${iconUrl(r.player_name)}"
+           onerror="this.style.display='none'">
+    </div>`;
+
+  div.innerHTML = `
+    <div class="name" title="${esc(r.player_name)}">
+      <span class="medal">${medalFor(rank)}</span>${esc(r.player_name)}
+    </div>
+    <div class="toprow">
+      <div class="score">${r._displayScore.toFixed(1)}</div>
+      ${imgHTML}
+    </div>
     <div class="breakdown">
       <span class="pill">K/D ${num(r.kd_unit).toFixed(2)}</span>
       <span class="pill">W/L ${num(r.wr_unit).toFixed(2)}</span>
@@ -219,20 +264,169 @@ function makeCard(r,raw,rank){
       <span class="pill">VERSATILITY ${num(r.vers_unit).toFixed(2)}</span>
     </div>
     <div class="tooltip">
-      <div class="row"><span>Kills</span><strong>${esc(raw.K??'—')}</strong></div>
-      <div class="row"><span>Deaths</span><strong>${esc(raw.D??'—')}</strong></div>
-      <div class="row"><span>Kills/Death</span><strong>${isFinite(kdRaw)?kdRaw.toFixed(3):'—'}</strong></div>
-      <div class="row"><span>Kills/minute</span><strong>${isFinite(kpmRaw)?kpmRaw.toFixed(3):'—'}</strong></div>
-      <div class="row"><span>Wins</span><strong>${esc(raw.Wins??'—')}</strong></div>
-      <div class="row"><span>Losses</span><strong>${esc(raw.Losses??'—')}</strong></div>
-      <div class="row"><span>Win rate</span><strong>${isFinite(wr)?(wr*100).toFixed(1)+'%':'—'}</strong></div>
-      <div class="row"><span>Hours in-game</span><strong>${esc(raw.hours??'—')}</strong></div>
-      <div class="row"><span>Weapons &gt; level 50</span><strong>${esc(raw.weapons_ge_1000??'—')}</strong></div>
-      <div class="row"><span>Revives</span><strong>${esc(raw.revives??'—')}</strong></div>
-      <div class="row"><span>Items built</span><strong>${esc(raw.items??'—')}</strong></div>
-    </div>`;
+      <div class="row"><span>Kills</span><strong>${esc(raw.K ?? '—')}</strong></div>
+      <div class="row"><span>Deaths</span><strong>${esc(raw.D ?? '—')}</strong></div>
+      <div class="row"><span>Kills/Death</span><strong>${isFinite(kdRaw)? kdRaw.toFixed(3) : '—'}</strong></div>
+      <div class="row"><span>Kills/minute</span><strong>${isFinite(kpmRaw)? kpmRaw.toFixed(3) : '—'}</strong></div>
+      <div class="row"><span>Wins</span><strong>${esc(raw.Wins ?? '—')}</strong></div>
+      <div class="row"><span>Losses</span><strong>${esc(raw.Losses ?? '—')}</strong></div>
+      <div class="row"><span>Win rate</span><strong>${isFinite(wr)? (wr*100).toFixed(1)+'%':'—'}</strong></div>
+      <div class="row"><span>Hours in-game</span><strong>${esc(raw.hours ?? '—')}</strong></div>
+      <div class="row"><span>Weapons &gt; level 50</span><strong>${esc(raw.weapons_ge_1000 ?? '—')}</strong></div>
+      <div class="row"><span>Revives</span><strong>${esc(raw.revives ?? '—')}</strong></div>
+      <div class="row"><span>Items built</span><strong>${esc(raw.items ?? '—')}</strong></div>
+    </div>
+  `;
   return div;
 }
+
+function groupAndSort(rows, playersIndex, searchTerm, tierFilter, sortBy){
+  const results = rows.map(r => {
+    const sc = num(r.score);
+    const disp = sc/10;                 // 0–10 scale
+    const tier = assignTier(disp);
+    return {...r, _displayScore: disp, _tier: tier};
+  });
+
+  // Search filter
+  const q = (searchTerm||'').trim().toLowerCase();
+  let filtered = results.filter(r => q ? String(r.player_name||'').toLowerCase().includes(q) : true);
+
+  // Tier filter
+  if(tierFilter && tierFilter !== 'ALL'){
+    filtered = filtered.filter(r => r._tier === tierFilter);
+  }
+
+  // Sorting
+  const sortMap = {
+    score: (a,b)=> num(b._displayScore)-num(a._displayScore),
+    kd:    (a,b)=> num(b.kd_unit)-num(a.kd_unit),
+    wr:    (a,b)=> num(b.wr_unit)-num(a.wr_unit),
+    kpm:   (a,b)=> num(b.kpm_unit)-num(a.kpm_unit),
+    exp:   (a,b)=> num(b.exp_unit)-num(a.exp_unit),
+    vers:  (a,b)=> num(b.vers_unit)-num(a.vers_unit),
+  };
+  filtered.sort(sortMap[sortBy] || sortMap.score);
+
+  // Re-rank globally for medals
+  filtered.forEach((r, i) => r._rank = i+1);
+
+  // Group by tier preserving this filtered/sorted order
+  const groups = {S:[], A:[], B:[], C:[], F:[]};
+  filtered.forEach(r => groups[r._tier].push(r));
+  return groups;
+}
+
+function render(groups, playersIndex){
+  const container = document.getElementById('container');
+  container.innerHTML = '';
+  const order = ['S','A','B','C','F'];
+
+  order.forEach(tier => {
+    const list = groups[tier];
+    if(!list || !list.length) return;
+
+    const section = document.createElement('section');
+    section.className = 'tier-section';
+
+    const label = document.createElement('div');
+    label.className = 'tier-label ' + tier;
+    label.textContent = tier;
+    section.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'tier-grid';
+
+    list.forEach(r => {
+      const raw = playersIndex[String(r.player_name||'').toLowerCase()] || {};
+      grid.appendChild(makeCard(r, raw, r._rank));
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+function csvOfFiltered(groups){
+  // Flatten groups in tier order for downloadable CSV
+  const order = ['S','A','B','C','F'];
+  const flat = [];
+  order.forEach(tier => {
+    (groups[tier] || []).forEach(r => {
+      flat.push({
+        tier: tier,
+        rank: r._rank,
+        player_name: r.player_name,
+        rating_0_to_10: r._displayScore.toFixed(1),
+        kd_unit: num(r.kd_unit).toFixed(3),
+        wr_unit: num(r.wr_unit).toFixed(3),
+        kpm_unit: num(r.kpm_unit).toFixed(3),
+        exp_unit: num(r.exp_unit).toFixed(3),
+        vers_unit: num(r.vers_unit).toFixed(3),
+        score_raw_0_to_100: num(r.score).toFixed(2)
+      });
+    });
+  });
+  return Papa.unparse(flat);
+}
+
+(function initTheme(){
+  const saved = localStorage.getItem('theme');
+  if(saved) document.documentElement.setAttribute('data-theme', saved);
+  const isLight = document.documentElement.getAttribute('data-theme')==='light';
+  const toggle = document.getElementById('themeToggle');
+  if (toggle) {
+    toggle.checked = isLight;
+    toggle.addEventListener('change', e=>{
+      const theme = e.target.checked ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+    });
+  }
+})();
+
+(async function init(){
+  const status = document.getElementById('status');
+  try {
+    const resText = await fetchCSV('results.csv');
+    const resParsed = parseCSV(resText);
+    if (!resParsed.data || !resParsed.data.length) {
+      status.textContent = 'results.csv loaded but has 0 rows.';
+      return;
+    }
+    const playersText = await fetchCSV('players.csv').catch(()=>null);
+    const playersParsed = playersText ? parseCSV(playersText) : {data:[]};
+    const playersIndex = buildIndex(playersParsed.data);
+
+    const searchEl = document.getElementById('search');
+    const tierEl = document.getElementById('tierFilter');
+    const sortEl = document.getElementById('sortBy');
+    const rows = resParsed.data.slice();
+
+    function refresh(){
+      const groups = groupAndSort(rows, playersIndex, searchEl?.value, tierEl?.value, sortEl?.value);
+      render(groups, playersIndex);
+
+      // Build downloadable filtered CSV of current view
+      const csv = csvOfFiltered(groups);
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const dl = document.getElementById('downloadView');
+      if (dl) dl.href = url;
+
+      const total = ['S','A','B','C','F'].reduce((acc,k)=>acc+(groups[k]?.length||0),0);
+      status.textContent = `Loaded ${rows.length} players • Showing ${total} after filters`;
+    }
+
+    if (searchEl) searchEl.addEventListener('input', refresh);
+    if (tierEl) tierEl.addEventListener('change', refresh);
+    if (sortEl) sortEl.addEventListener('change', refresh);
+
+    refresh();
+  } catch (e) {
+    document.getElementById('status').textContent = 'Failed to load CSV: ' + e.message;
+  }
+})();
 </script>
 </body>
 </html>
