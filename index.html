@@ -3,393 +3,137 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chivalry 2 Leaderboard — Plus (No Penalties)</title>
+<title>Chivalry 2 Leaderboard — Final (with diagnostics)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --bg:#0b1020;
-    --card:#121a33cc;
-    --card-border:#2a355f;
-    --text:#e7ecff;
-    --muted:#9aa6d1;
-    --accent:#5b8cff;
-    --accent2:#9c7bff;
-    --accent3:#2ee7c9;
-    --pill:#1e2647;
-    --glow: 0 10px 30px rgba(91,140,255,0.30);
-    --medal1:#ffd54a;
-    --medal2:#cfd8dc;
-    --medal3:#d1884f;
+    --bg:#0b1020; --card:#121a33cc; --card-border:#2a355f; --text:#e7ecff; --muted:#9aa6d1;
+    --accent:#5b8cff; --accent2:#9c7bff; --accent3:#2ee7c9; --glow: 0 10px 30px rgba(91,140,255,0.30);
+    --ok:#2ee7c9; --warn:#ffd166; --err:#ff6b6b;
   }
-  [data-theme="light"]{
-    --bg:#f6f8ff;
-    --card:#ffffff;
-    --card-border:#e6e9f5;
-    --text:#0e1330;
-    --muted:#556089;
-    --accent:#3056ff;
-    --accent2:#8a5bff;
-    --accent3:#00bfa6;
-    --pill:#eef2ff;
-    --glow: 0 6px 18px rgba(48,86,255,0.15);
-    --medal1:#f0b90b;
-    --medal2:#9aa5b1;
-    --medal3:#b46a3a;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; padding:2rem 1.2rem 4rem;
-    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-    background:
-      radial-gradient(1200px 800px at 10% -10%, rgba(91,140,255,0.15), transparent 60%),
-      radial-gradient(900px 700px at 110% 10%, rgba(156,123,255,0.12), transparent 60%),
-      radial-gradient(1000px 900px at 50% 120%, rgba(46,231,201,0.10), transparent 60%),
-      var(--bg);
-    color:var(--text);
-  }
-  header{
-    max-width:1200px; margin:0 auto 1rem auto;
-    display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
-  }
+  body{margin:0; padding:2rem 1.2rem 4rem; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+       background: radial-gradient(1200px 800px at 10% -10%, rgba(91,140,255,0.15), transparent 60%),
+                   radial-gradient(900px 700px at 110% 10%, rgba(156,123,255,0.12), transparent 60%),
+                   radial-gradient(1000px 900px at 50% 120%, rgba(46,231,201,0.10), transparent 60%),
+                   var(--bg); color:var(--text)}
+  header{max-width:1200px; margin:0 auto 1rem auto; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;}
   h1{font-weight:800; letter-spacing:0.4px; margin:0}
   .sub{color:var(--muted)}
-  .controls{
-    max-width:1200px; margin:0.75rem auto 1.5rem auto;
-    display:grid; gap:0.7rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items:start;
-  }
-  .chip{
-    background:linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip:text; background-clip:text;
-    color:transparent; font-weight:800; letter-spacing:0.4px;
-  }
-  .field, .panel{
-    background:var(--card); border:1px solid var(--card-border);
-    padding:0.7rem 0.9rem; border-radius:12px; color:var(--text);
-  }
-  .field{ display:flex; align-items:center; gap:0.5rem; }
-  .field input, .field select{
-    background:transparent; border:none; outline:none; color:var(--text);
-    font:inherit; min-width:10ch;
-  }
-  .actions{ display:flex; gap:0.5rem; align-items:center; }
-  .btn{
-    appearance:none; border:1px solid var(--card-border); background:var(--card);
-    color:var(--text); padding:0.45rem 0.7rem; border-radius:10px; cursor:pointer;
-  }
-  .btn:hover{ border-color:#4360b9; }
-  .toggle{ display:flex; align-items:center; gap:0.5rem; cursor:pointer; }
-  .grid{
-    max-width:1200px; margin:0 auto;
-    display:grid; gap:1rem;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  }
-  .card{
-    position:relative;
-    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00)),
-               var(--card);
-    border:1px solid var(--card-border);
-    border-radius:16px; padding:1rem 1rem 1.1rem;
-    box-shadow: var(--glow);
-    transition: transform .16s ease, border-color .16s ease;
-    overflow:hidden;
-  }
-  .card:hover{ transform: translateY(-2px); border-color:#4360b9; }
-  .rank{
-    position:absolute; top:0.8rem; right:0.9rem;
-    font-weight:800; color:#bdc9ff33; font-size:2.2rem; line-height:1;
-  }
-  .rank.medal1{ color:var(--medal1); text-shadow:0 0 24px rgba(255,213,74,0.3); }
-  .rank.medal2{ color:var(--medal2); text-shadow:0 0 24px rgba(207,216,220,0.2); }
-  .rank.medal3{ color:var(--medal3); text-shadow:0 0 24px rgba(209,136,79,0.2); }
-  .name{ font-weight:800; font-size:1.15rem; letter-spacing:0.2px; }
-  .score{
-    font-weight:800; font-size:2.0rem; margin-top:0.25rem;
-    background:linear-gradient(135deg, var(--accent), var(--accent3));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-  }
-  .badges{ display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.6rem; }
-  .pill{
-    background:rgba(255,255,255,0.06);
-    border:1px solid rgba(255,255,255,0.08);
-    padding:0.2rem 0.5rem; border-radius:999px; color:var(--muted);
-    font-size:0.82rem;
-  }
-  .muted{ color:var(--muted); font-size:0.88rem; }
-
-  /* Tooltip */
-  .tooltip{
-    position:absolute; inset:auto auto 12px 12px;
-    background:#0d1430; border:1px solid #2a355f; border-radius:14px;
-    padding:0.8rem 0.9rem; font-size:0.9rem; line-height:1.35;
-    box-shadow:0 12px 40px rgba(0,0,0,0.4);
-    display:none; z-index:5; min-width: 260px;
-  }
-  [data-theme="light"] .tooltip{ background:#ffffff; border-color:#e6e9f5; }
-  .tooltip .row{ display:flex; justify-content:space-between; gap:1rem; }
-  .tooltip .row + .row{ margin-top:0.25rem; }
-  .card:hover .tooltip{ display:block; }
-
-  /* Mini component bars (sparklines) */
-  .bars{ margin-top:0.7rem; display:grid; gap:0.25rem; }
-  .bar{
-    height:8px; background:rgba(255,255,255,0.07); border-radius:999px; overflow:hidden;
-    border:1px solid rgba(255,255,255,0.08);
-  }
-  .bar > i{
-    display:block; height:100%; width:0%;
-    background: linear-gradient(90deg, var(--accent), var(--accent3));
-  }
-
-  footer{ max-width:1200px; margin:1.5rem auto 0; color:var(--muted); font-size:0.85rem; }
-  .hint{ color:#a8b5ff; }
-  .panel h3{ margin:0 0 .5rem 0; font-size:1rem; }
-  .sliders{ display:grid; gap:.35rem; }
-  .slider-row{ display:grid; grid-template-columns: 80px 1fr 48px; align-items:center; gap:.5rem; }
-  .slider-row input[type="range"]{ width:100%; }
+  .status{max-width:1200px; margin:0 auto 1rem auto; border:1px solid var(--card-border); background:#0d1430; border-radius:12px; padding:.7rem .9rem; font-size:.92rem;}
+  .status .ok{color:var(--ok)} .status .warn{color:var(--warn)} .status .err{color:var(--err)}
+  .grid{max-width:1200px; margin:0 auto; display:grid; gap:1rem; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));}
+  .card{position:relative; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00)), var(--card); border:1px solid var(--card-border);
+        border-radius:16px; padding:1rem 1rem 1.1rem; box-shadow: var(--glow);}
+  .rank{position:absolute; top:.8rem; right:.9rem; font-weight:800; color:#bdc9ff33; font-size:2.2rem; line-height:1;}
+  .name{font-weight:800; font-size:1.15rem; letter-spacing:0.2px;}
+  .score{font-weight:800; font-size:2.0rem; margin-top:.25rem; background:linear-gradient(135deg, var(--accent), var(--accent3)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .pill{background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:.2rem .5rem; border-radius:999px; color:#9aa6d1; font-size:.82rem; display:inline-block; margin-right:.4rem; margin-top:.4rem}
+  .tooltip{position:absolute; inset:auto auto 12px 12px; background:#0d1430; border:1px solid #2a355f; border-radius:14px; padding:.8rem .9rem; font-size:.9rem; line-height:1.35; box-shadow:0 12px 40px rgba(0,0,0,0.4); display:none; z-index:5; min-width: 260px;}
+  .card:hover .tooltip{display:block}
+  .tooltip .row{display:flex; justify-content:space-between; gap:1rem} .tooltip .row + .row{margin-top:.25rem}
 </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>Chivalry 2 <span class="chip">Leaderboard</span></h1>
-      <div class="sub">Hover a card to see each player’s raw stats. Updated from <code>results.csv</code> (+ optional <code>players.csv</code>).</div>
+      <h1>Chivalry 2 Leaderboard</h1>
+      <div class="sub">Loads <code>results.csv</code> (+ optional <code>players.csv</code>) from this folder. This build shows detailed status/errors.</div>
     </div>
-    <div class="actions">
-      <a class="btn" href="results.csv" download>⬇️ Download results.csv</a>
-      <a class="btn" href="players.csv" download>⬇️ Download players.csv</a>
-      <label class="toggle"><input id="themeToggle" type="checkbox"> Light mode</label>
-    </div>
+    <a class="sub" href="#" id="reload">↻ hard reload</a>
   </header>
 
-  <div class="controls">
-    <div class="field">
-      <span>Sort</span>
-      <select id="sortKey">
-        <option value="score" selected>Score</option>
-        <option value="player_name">Player</option>
-        <option value="raw_kd">Raw KD</option>
-        <option value="kd_unit">KD unit</option>
-        <option value="wr_unit">WR unit</option>
-        <option value="exp_unit">EXP unit</option>
-        <option value="vers_unit">VERS unit</option>
-        <option value="rev_unit">REV unit</option>
-        <option value="build_unit">BUILD unit</option>
-      </select>
-      <select id="sortDir">
-        <option value="desc" selected>Desc</option>
-        <option value="asc">Asc</option>
-      </select>
-    </div>
-
-    <div class="field">
-      <span>Filter</span>
-      <input id="filterText" placeholder="type a player..." />
-    </div>
-
-    <div class="panel">
-      <h3>What‑if Weights (client‑side, read‑only)</h3>
-      <div class="sliders">
-        <div class="slider-row"><label>KD</label><input id="w_kd" type="range" min="0" max="100" value="35"><span id="w_kd_v">35</span></div>
-        <div class="slider-row"><label>W/L</label><input id="w_wr" type="range" min="0" max="100" value="25"><span id="w_wr_v">25</span></div>
-        <div class="slider-row"><label>EXP</label><input id="w_exp" type="range" min="0" max="100" value="20"><span id="w_exp_v">20</span></div>
-        <div class="slider-row"><label>VERS</label><input id="w_vers" type="range" min="0" max="100" value="10"><span id="w_vers_v">10</span></div>
-        <div class="slider-row"><label>REV</label><input id="w_rev" type="range" min="0" max="100" value="7"><span id="w_rev_v">7</span></div>
-        <div class="slider-row"><label>BUILD</label><input id="w_build" type="range" min="0" max="100" value="3"><span id="w_build_v">3</span></div>
-      </div>
-      <div style="display:flex; gap:.5rem; margin-top:.5rem;">
-        <button class="btn" id="applyWeights">Apply</button>
-        <button class="btn" id="resetWeights">Reset</button>
-        <label class="toggle"><input id="useWhatIf" type="checkbox"> Use what‑if scores</label>
-      </div>
-      <div class="muted" style="margin-top:.4rem;">Weights are normalized on the fly; nothing is saved or written.</div>
-    </div>
-  </div>
-
+  <div class="status" id="status">Booting…</div>
   <section class="grid" id="grid"></section>
 
-  <footer>
-    <div>Static, read-only UI. Host this HTML together with <span class="hint">results.csv</span> and optionally <span class="hint">players.csv</span>. What‑if sliders only change the view in your browser.</div>
-  </footer>
-
 <script>
-async function loadCSV(url) {
+function esc(s){return String(s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]));}
+function setStatus(msg, cls){ const el=document.getElementById('status'); el.className='status'; if(cls) el.classList.add(cls); el.innerHTML = msg; }
+document.getElementById('reload').addEventListener('click', e=>{ e.preventDefault(); location.reload(true); });
+
+async function fetchText(url){
+  const u = new URL(url, location.href);
+  // cache-bust every fetch
+  u.searchParams.set('v', Date.now());
+  const res = await fetch(u.toString(), {cache:'no-store'});
+  if(!res.ok) throw new Error(url + ' HTTP ' + res.status);
+  return await res.text();
+}
+
+async function loadCSV(url, requiredHeaders=null){
   try{
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text = await res.text();
-    const lines = text.trim().split(/\\r?\\n/);
-    const headers = lines[0].split(',').map(h => h.trim());
-    const rows = lines.slice(1).filter(Boolean).map(line => {
-      const cols = line.split(',').map(x => x.trim());
-      const obj = {};
-      headers.forEach((h,i)=>{ obj[h]=cols[i]; });
-      return obj;
-    });
-    return rows;
+    const text = await fetchText(url);
+    const parsed = Papa.parse(text.trim(), {header:true, dynamicTyping:true, skipEmptyLines:true});
+    const headers = (parsed.meta && parsed.meta.fields) ? parsed.meta.fields : [];
+    console.log('Loaded', url, 'headers:', headers, 'rows:', parsed.data.length);
+
+    if(requiredHeaders){
+      const missing = requiredHeaders.filter(h => !headers.includes(h));
+      if(missing.length){
+        setStatus(`Loaded <code>${esc(url)}</code> but missing header(s): <strong class="err">${esc(missing.join(', '))}</strong>. Found headers: <code>${esc(headers.join(', '))}</code>.`, 'err');
+        return null;
+      }
+    }
+    if(!parsed.data.length){
+      setStatus(`Loaded <code>${esc(url)}</code> but it contains <span class="warn">0 rows</span>. Is the file empty?`, 'warn');
+      return null;
+    }
+    return parsed.data;
   }catch(e){
+    setStatus(`Failed to load <code>${esc(url)}</code>: <span class="err">${esc(e.message)}</span>. Ensure it is in the SAME folder as this HTML.`, 'err');
+    console.error(e);
     return null;
   }
 }
 
-function mergeResults(results, players){
-  if(!players) return results;
-  const idx = Object.create(null);
-  players.forEach(p => { idx[(p.player_name||'').toLowerCase()] = p; });
-  return results.map(r => {
-    const k = String(r.player_name||'').toLowerCase();
-    const p = idx[k] || {};
-    return {...r, _raw:p};
-  });
-}
+function num(v){ const x = Number(v); return Number.isFinite(x) ? x : 0; }
 
-function num(v, d=0){ const x = Number(v); return Number.isFinite(x)?x:d; }
-
-function computeWhatIfScore(r, weights){
-  const s = weights.kd + weights.wr + weights.exp + weights.vers + weights.rev + weights.build;
-  const norm = { kd:weights.kd/s, wr:weights.wr/s, exp:weights.exp/s, vers:weights.vers/s, rev:weights.rev/s, build:weights.build/s };
-  const blended = 100 * (
-    norm.kd*num(r.kd_unit) +
-    norm.wr*num(r.wr_unit) +
-    norm.exp*num(r.exp_unit) +
-    norm.vers*num(r.vers_unit) +
-    norm.rev*num(r.rev_unit) +
-    norm.build*num(r.build_unit)
-  );
-  return Math.round(blended*100)/100;
-}
-
-function renderGrid(rows){
+function render(rows, players){
   const grid = document.getElementById('grid');
-  grid.innerHTML = '';
+  grid.innerHTML='';
+  rows.sort((a,b)=> num(b.score) - num(a.score));
+  const idx = Object.create(null);
+  (players||[]).forEach(p => { idx[String(p.player_name||'').toLowerCase()] = p; });
+
   rows.forEach((r, i) => {
-    const raw = r._raw || {};
+    const raw = idx[String(r.player_name||'').toLowerCase()] || {};
     const wr = (num(raw.Wins)+num(raw.Losses))>0 ? (num(raw.Wins)/(num(raw.Wins)+num(raw.Losses))) : NaN;
     const card = document.createElement('article');
-    card.className = 'card';
-    let medalClass = '';
-    if(i===0) medalClass=' medal1';
-    else if(i===1) medalClass=' medal2';
-    else if(i===2) medalClass=' medal3';
+    card.className='card';
     card.innerHTML = `
-      <div class="rank${medalClass}">#${i+1}</div>
-      <div class="name" title="${r.player_name}">${r.player_name}</div>
-      <div class="score">${Number(r._scoreView ?? r.score).toFixed(2)}</div>
-
-      <div class="badges">
-        <span class="pill">KD ${Number(r.raw_kd).toFixed(2)}</span>
-        <span class="pill">WR ${Number(r.wr_unit).toFixed(2)}</span>
-        <span class="pill">EXP ${Number(r.exp_unit).toFixed(2)}</span>
-        <span class="pill">VERS ${Number(r.vers_unit).toFixed(2)}</span>
+      <div class="rank">#${i+1}</div>
+      <div class="name" title="${esc(r.player_name)}">${esc(r.player_name)}</div>
+      <div class="score">${num(r.score).toFixed(2)}</div>
+      <div>
+        <span class="pill">KD ${num(r.raw_kd).toFixed(2)}</span>
+        <span class="pill">WR ${num(r.wr_unit).toFixed(2)}</span>
+        <span class="pill">EXP ${num(r.exp_unit).toFixed(2)}</span>
+        <span class="pill">VERS ${num(r.vers_unit).toFixed(2)}</span>
       </div>
-
-      <div class="bars" aria-hidden="true">
-        <div class="bar"><i style="width:${Math.max(0,Math.min(100, num(r.kd_unit)*100))}%"></i></div>
-        <div class="bar"><i style="width:${Math.max(0,Math.min(100, num(r.wr_unit)*100))}%"></i></div>
-        <div class="bar"><i style="width:${Math.max(0,Math.min(100, num(r.exp_unit)*100))}%"></i></div>
-        <div class="bar"><i style="width:${Math.max(0,Math.min(100, num(r.vers_unit)*100))}%"></i></div>
-      </div>
-
       <div class="tooltip">
-        <div class="row"><span>Kills</span><strong>${raw.K ?? '—'}</strong></div>
-        <div class="row"><span>Deaths</span><strong>${raw.D ?? '—'}</strong></div>
-        <div class="row"><span>Wins</span><strong>${raw.Wins ?? '—'}</strong></div>
-        <div class="row"><span>Losses</span><strong>${raw.Losses ?? '—'}</strong></div>
+        <div class="row"><span>Kills</span><strong>${esc(raw.K ?? '—')}</strong></div>
+        <div class="row"><span>Deaths</span><strong>${esc(raw.D ?? '—')}</strong></div>
+        <div class="row"><span>Wins</span><strong>${esc(raw.Wins ?? '—')}</strong></div>
+        <div class="row"><span>Losses</span><strong>${esc(raw.Losses ?? '—')}</strong></div>
         <div class="row"><span>Win rate</span><strong>${isFinite(wr)? (wr*100).toFixed(1)+'%':'—'}</strong></div>
-        <div class="row"><span>Hours</span><strong>${raw.hours ?? '—'}</strong></div>
-        <div class="row"><span>Weapons ≥1000</span><strong>${raw.weapons_ge_1000 ?? '—'}</strong></div>
-        <div class="row"><span>Revives</span><strong>${raw.revives ?? '—'}</strong></div>
-        <div class="row"><span>Items built</span><strong>${raw.items ?? '—'}</strong></div>
+        <div class="row"><span>Hours</span><strong>${esc(raw.hours ?? '—')}</strong></div>
+        <div class="row"><span>Weapons ≥1000</span><strong>${esc(raw.weapons_ge_1000 ?? '—')}</strong></div>
+        <div class="row"><span>Revives</span><strong>${esc(raw.revives ?? '—')}</strong></div>
+        <div class="row"><span>Items built</span><strong>${esc(raw.items ?? '—')}</strong></div>
       </div>
     `;
     grid.appendChild(card);
   });
+  setStatus(`Loaded <strong class="ok">${rows.length}</strong> players from <code>results.csv</code> ✓`, '');
 }
-
-function sortRows(rows, key, dir){
-  const mul = dir==='asc'?1:-1;
-  return rows.slice().sort((a,b)=>{
-    const aa = (key==='player_name') ? String(a[key]).toLowerCase() : Number(a._scoreView ?? a[key]);
-    const bb = (key==='player_name') ? String(b[key]).toLowerCase() : Number(b._scoreView ?? b[key]);
-    if (aa < bb) return -1*mul;
-    if (aa > bb) return  1*mul;
-    return 0;
-  });
-}
-
-function filterRows(rows, text){
-  if(!text) return rows;
-  const t = text.toLowerCase();
-  return rows.filter(r => String(r.player_name||'').toLowerCase().includes(t));
-}
-
-(function initTheme(){
-  const saved = localStorage.getItem('theme');
-  if(saved) document.documentElement.setAttribute('data-theme', saved);
-  const isLight = document.documentElement.getAttribute('data-theme')==='light';
-  document.getElementById('themeToggle').checked = isLight;
-  document.getElementById('themeToggle').addEventListener('change', e=>{
-    const theme = e.target.checked ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  });
-})();
 
 (async function init(){
-  let results = await loadCSV('results.csv');
-  if(!results){ document.body.innerHTML = '<p style="padding:2rem">Could not load <code>results.csv</code>.</p>'; return; }
-  const players = await loadCSV('players.csv'); // optional for raw tooltips
-  let rows = mergeResults(results, players);
-
-  const state = { sortKey:'score', sortDir:'desc', filterText:'', useWhatIf:false,
-    weights:{kd:35, wr:25, exp:20, vers:10, rev:7, build:3} };
-
-  function recalcWhatIf(){
-    if(!state.useWhatIf) { rows.forEach(r=> delete r._scoreView); return; }
-    rows.forEach(r => { r._scoreView = computeWhatIfScore(r, state.weights); });
-  }
-
-  function update(){
-    recalcWhatIf();
-    let view = filterRows(rows, state.filterText);
-    view = sortRows(view, state.sortKey, state.sortDir);
-    renderGrid(view);
-  }
-
-  // controls
-  document.getElementById('sortKey').addEventListener('change', e => { state.sortKey = e.target.value; update(); });
-  document.getElementById('sortDir').addEventListener('change', e => { state.sortDir = e.target.value; update(); });
-  document.getElementById('filterText').addEventListener('input', e => { state.filterText = e.target.value; update(); });
-
-  function bindSlider(id, key){
-    const el = document.getElementById(id);
-    const label = document.getElementById(id+'_v');
-    el.addEventListener('input', e=> { label.textContent = e.target.value; });
-    el.addEventListener('change', e=> { state.weights[key] = Number(e.target.value); update(); });
-  }
-  bindSlider('w_kd','kd');
-  bindSlider('w_wr','wr');
-  bindSlider('w_exp','exp');
-  bindSlider('w_vers','vers');
-  bindSlider('w_rev','rev');
-  bindSlider('w_build','build');
-
-  document.getElementById('applyWeights').addEventListener('click', update);
-  document.getElementById('resetWeights').addEventListener('click', ()=>{
-    state.weights = {kd:35, wr:25, exp:20, vers:10, rev:7, build:3};
-    ['w_kd','w_wr','w_exp','w_vers','w_rev','w_build'].forEach((id,i)=>{
-      const defaults=[35,25,20,10,7,3]; const el=document.getElementById(id);
-      el.value = defaults[i]; document.getElementById(id+'_v').textContent = defaults[i];
-    });
-    update();
-  });
-  document.getElementById('useWhatIf').addEventListener('change', e=>{
-    state.useWhatIf = e.target.checked; update();
-  });
-
-  update();
+  const results = await loadCSV('results.csv', ['player_name','raw_kd','kd_unit','wr_unit','exp_unit','vers_unit','rev_unit','build_unit','score']);
+  if(!results) return;
+  const players = await loadCSV('players.csv'); // optional
+  render(results, players);
 })();
 </script>
 </body>
