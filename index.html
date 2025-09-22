@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chivalry 2 Leaderboard — Pro+ Tiered</title>
+<title>V3X Clan Player Tier-List and Chivalry Skill Score (CSS)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<!-- UI font + medieval tier label font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
   :root{
@@ -44,7 +45,7 @@
     max-width:1200px; margin:0 auto 1rem auto;
     display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
   }
-  h1{font-weight:800; letter-spacing:0.4px; margin:0}
+  h1{font-weight:900; letter-spacing:0.4px; margin:0}
   .sub{color:var(--muted)}
   .actions{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
   .btn{
@@ -72,13 +73,13 @@
     background:var(--card);
     border:1px solid var(--card-border);
     box-shadow:var(--glow);
-    font-family:'UnifrakturMaguntia', cursive;
+    font-family:'Cinzel', serif; /* legible medieval */
+    font-weight:900;
     font-size:84px; line-height:1; letter-spacing:2px;
   }
   .tier-label.S{ 
     background: linear-gradient(160deg, var(--platinum1), var(--platinum2) 60%, var(--platinum3));
-    color:#0e1330;
-    border:1px solid rgba(255,255,255,0.5);
+    color:#0e1330; border:1px solid rgba(255,255,255,0.5);
   }
   .tier-label.A{ color:var(--gold); }
   .tier-label.B{ color:var(--silver); }
@@ -87,49 +88,50 @@
 
   .tier-grid{
     display:grid; gap:1rem;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
 
-  /* Player cards */
+  /* Player cards (taller for tooltips) */
   .card{
     position:relative;
     background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00)),
                var(--card);
     border:2px solid var(--card-border);
-    border-radius:16px; padding:1rem 1rem 1.1rem;
+    border-radius:16px; padding:1.5rem;
+    min-height:260px; /* taller cards */
     box-shadow: var(--glow);
     transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
     overflow:hidden;
   }
   .card:hover{ transform: translateY(-2px); border-color:#4360b9; box-shadow:0 14px 36px rgba(0,0,0,0.4); }
-  .name{ font-weight:800; font-size:1.05rem; letter-spacing:0.2px; display:flex; align-items:center; gap:.5rem; }
-  .medal{ font-size:1.15rem; }
+  .name{ font-weight:800; font-size:1.15rem; letter-spacing:0.2px; display:flex; align-items:center; gap:.5rem; }
+  .medal{ font-size:1.25rem; }
   .score{
-    font-weight:900; font-size:3.1rem; margin-top:.15rem;
+    font-weight:900; font-size:3.3rem; margin-top:.25rem;
     background:linear-gradient(135deg, var(--accent), var(--accent3));
     -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  .breakdown{ color:var(--muted); font-size:0.80rem; margin-top:0.35rem; display:flex; flex-wrap:wrap; gap:.35rem; }
-  .pill{ display:inline-block; padding:.15rem .45rem; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); }
+  .breakdown{ color:var(--muted); font-size:0.85rem; margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:.35rem; }
+  .pill{ display:inline-block; padding:.2rem .55rem; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); }
 
   /* Tier color borders on cards */
-  .card.S{ border-image: linear-gradient(45deg, var(--platinum1), var(--platinum3)) 1; }
-  .card.A{ border-image: var(--gold-grad) 1; }
-  .card.B{ border-image: var(--silver-grad) 1; }
-  .card.C{ border-image: var(--bronze-grad) 1; }
-  .card.F{ border-image: var(--gray-grad) 1; }
+  .card.S{ border-image: linear-gradient(45deg, var(--platinum1), var(--platinum3)) 1; border-image-slice: 1; }
+  .card.A{ border-image: var(--gold-grad) 1; border-image-slice: 1; }
+  .card.B{ border-image: var(--silver-grad) 1; border-image-slice: 1; }
+  .card.C{ border-image: var(--bronze-grad) 1; border-image-slice: 1; }
+  .card.F{ border-image: var(--gray-grad) 1; border-image-slice: 1; }
 
   /* Tooltip with raw stats */
   .tooltip{
     position:absolute; inset:auto auto 12px 12px;
     background:#0d1430; border:1px solid #2a355f; border-radius:14px;
-    padding:0.8rem 0.9rem; font-size:0.9rem; line-height:1.35;
+    padding:1rem; font-size:1rem; line-height:1.4;
     box-shadow:0 12px 40px rgba(0,0,0,0.4);
     display:none; z-index:5; min-width: 280px;
   }
   [data-theme="light"] .tooltip{ background:#ffffff; border-color:#e6e9f5; }
   .tooltip .row{ display:flex; justify-content:space-between; gap:1rem; }
-  .tooltip .row + .row{ margin-top:0.25rem; }
+  .tooltip .row + .row{ margin-top:0.35rem; }
   .card:hover .tooltip{ display:block; }
 
   /* Empty-state / status */
@@ -139,8 +141,8 @@
 <body>
   <header>
     <div>
-      <h1>Chivalry 2 <span class="sub">Pro+ Tiered Leaderboard</span></h1>
-      <div class="sub">Scores shown on a 0–10 scale (one decimal). Hover a card to see raw stats.</div>
+      <h1>V3X Clan <span class="sub">Player Tier-List and Chivalry Skill Score (CSS)</span></h1> 
+      <div class="sub">Scores shown on a 0–10 scale. Hover over a card to see individual stats.</div>
     </div>
     <div class="actions">
       <a class="btn" href="results.csv" download>⬇️ results.csv</a>
@@ -241,7 +243,7 @@ function makeCard(r, raw, rank){
 function groupAndSort(rows, playersIndex, searchTerm, tierFilter, sortBy){
   const results = rows.map(r => {
     const sc = num(r.score);
-    const disp = sc/10;
+    const disp = sc/10;                 // 0–10 scale
     const tier = assignTier(disp);
     return {...r, _displayScore: disp, _tier: tier};
   });
@@ -306,11 +308,8 @@ function render(groups, playersIndex){
 }
 
 function csvOfFiltered(groups){
-  // Flatten groups in tier order
+  // Flatten groups in tier order for downloadable CSV
   const order = ['S','A','B','C','F'];
-  const rows = [];
-  order.forEach(t => (groups[t]||[]).forEach(r => rows.append));
-  // We will rebuild with map string; easier: use Papa to unparse
   const flat = [];
   order.forEach(tier => {
     (groups[tier] || []).forEach(r => {
@@ -335,12 +334,15 @@ function csvOfFiltered(groups){
   const saved = localStorage.getItem('theme');
   if(saved) document.documentElement.setAttribute('data-theme', saved);
   const isLight = document.documentElement.getAttribute('data-theme')==='light';
-  document.getElementById('themeToggle').checked = isLight;
-  document.getElementById('themeToggle').addEventListener('change', e=>{
-    const theme = e.target.checked ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  });
+  const toggle = document.getElementById('themeToggle');
+  if (toggle) {
+    toggle.checked = isLight;
+    toggle.addEventListener('change', e=>{
+      const theme = e.target.checked ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+    });
+  }
 })();
 
 (async function init(){
@@ -362,22 +364,22 @@ function csvOfFiltered(groups){
     const rows = resParsed.data.slice();
 
     function refresh(){
-      const groups = groupAndSort(rows, playersIndex, searchEl.value, tierEl.value, sortEl.value);
+      const groups = groupAndSort(rows, playersIndex, searchEl?.value, tierEl?.value, sortEl?.value);
       render(groups, playersIndex);
       // Build downloadable filtered CSV
       const csv = csvOfFiltered(groups);
       const blob = new Blob([csv], {type:'text/csv'});
       const url = URL.createObjectURL(blob);
       const dl = document.getElementById('downloadView');
-      dl.href = url;
+      if (dl) dl.href = url;
       // status
       const total = ['S','A','B','C','F'].reduce((acc,k)=>acc+(groups[k]?.length||0),0);
       status.textContent = `Loaded ${rows.length} players • Showing ${total} after filters`;
     }
 
-    searchEl.addEventListener('input', refresh);
-    tierEl.addEventListener('change', refresh);
-    sortEl.addEventListener('change', refresh);
+    if (searchEl) searchEl.addEventListener('input', refresh);
+    if (tierEl) tierEl.addEventListener('change', refresh);
+    if (sortEl) sortEl.addEventListener('change', refresh);
 
     refresh();
   } catch (e) {
